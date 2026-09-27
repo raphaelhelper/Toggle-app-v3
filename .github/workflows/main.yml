@@ -1,0 +1,74 @@
+Name: Extract Project
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract project ZIP
+        run: |
+          set -e
+
+          echo "=== Extracting ZIP ==="
+
+          mkdir -p extracted
+
+          unzip -o ToogleWords.zip -d extracted
+
+          echo "=== Removing workflow files from ZIP ==="
+
+          # Không cho ZIP ghi đè/tạo GitHub Actions workflow.
+          # GITHUB_TOKEN mặc định không được phép push workflow files.
+          rm -rf extracted/.github
+
+          echo "=== Copying project to repository root ==="
+
+          cp -a extracted/. .
+
+          echo "=== Cleaning temporary files ==="
+
+          rm -rf extracted
+          rm -f ToogleWords.zip
+
+          echo "=== Final project ==="
+
+          find . -maxdepth 3 -type f | sort
+
+      - name: Commit extracted project
+        run: |
+          set -e
+
+          echo "=== Configuring Git ==="
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          echo "=== Checking changes ==="
+
+          git status --short
+
+          echo "=== Adding files ==="
+
+          git add .
+
+          echo "=== Committing ==="
+
+          git commit -m "Extract Android project" || {
+            echo "No changes to commit."
+            exit 0
+          }
+
+          echo "=== Pushing ==="
+
+          git push
+
+          echo "=== Done ==="
