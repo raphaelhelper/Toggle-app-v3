@@ -1,4 +1,4 @@
-Name: Extract Project
+name: Extract Project
 
 on:
   workflow_dispatch:
@@ -18,29 +18,37 @@ jobs:
         run: |
           set -e
 
+          echo "=== Installing unzip ==="
+          sudo apt-get update && sudo apt-get install -y unzip
+
+          echo "=== Locating ZIP file ==="
+          # Tìm file có tên chứa 'ToogleWords' (không phân biệt hoa thường)
+          ZIP_FILE=$(find . -maxdepth 2 -iname "*ToogleWords*" \( -name "*.zip" -o -type f \) | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: Could not find any ZIP file matching 'ToogleWords'!"
+            echo "Current Directory Contents:"
+            ls -la
+            exit 1
+          fi
+
+          echo "Found ZIP file: $ZIP_FILE"
+
           echo "=== Extracting ZIP ==="
-
           mkdir -p extracted
-
-          unzip -o ToogleWords.zip -d extracted
+          unzip -o "$ZIP_FILE" -d extracted
 
           echo "=== Removing workflow files from ZIP ==="
-
-          # Không cho ZIP ghi đè/tạo GitHub Actions workflow.
-          # GITHUB_TOKEN mặc định không được phép push workflow files.
           rm -rf extracted/.github
 
           echo "=== Copying project to repository root ==="
-
           cp -a extracted/. .
 
           echo "=== Cleaning temporary files ==="
-
           rm -rf extracted
-          rm -f ToogleWords.zip
+          rm -f "$ZIP_FILE"
 
           echo "=== Final project ==="
-
           find . -maxdepth 3 -type f | sort
 
       - name: Commit extracted project
@@ -48,27 +56,22 @@ jobs:
           set -e
 
           echo "=== Configuring Git ==="
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           echo "=== Checking changes ==="
-
           git status --short
 
           echo "=== Adding files ==="
-
           git add .
 
           echo "=== Committing ==="
-
           git commit -m "Extract Android project" || {
             echo "No changes to commit."
             exit 0
           }
 
           echo "=== Pushing ==="
-
           git push
 
           echo "=== Done ==="
